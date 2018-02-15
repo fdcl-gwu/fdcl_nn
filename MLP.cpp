@@ -7,6 +7,76 @@
 using namespace std;
 using namespace Eigen;
 
+class c_softmax_layer
+{
+public:
+	int N;
+	VectorXd x,y;
+	MatrixXd df_dx;
+	c_softmax_layer(){};
+	c_softmax_layer(int N);
+	~c_softmax_layer(){};
+	
+	void init(int N);
+	VectorXd f(VectorXd x);
+	MatrixXd df(VectorXd x);
+	
+private:
+	double sum;
+};
+
+c_softmax_layer::c_softmax_layer(int N)
+{
+	init(N);
+}
+
+void c_softmax_layer::init(int N)
+{
+	this->N = N;
+
+	x.resize(N);
+	y.resize(N);
+	df_dx.resize(N,N);
+
+	x.setZero();
+	y.setZero();
+	df_dx.setZero();
+}
+
+VectorXd c_softmax_layer::f(VectorXd x)
+{
+	int i;
+	this->x = x;
+	sum=0.;
+	
+	for(i=0; i<x.size(); i++)
+		sum+=exp(x(i));
+	
+	for(i=0; i<x.size(); i++)
+		y(i)=exp(x(i))/sum;
+	
+	return y;
+}
+
+MatrixXd c_softmax_layer::df(VectorXd x)
+{
+	int i,j;
+	y=f(x);
+	
+	for(i=0;i<N;i++)
+	{
+		df_dx(i,i)=y(i);
+		for(j=i;j<N;j++)
+		{
+			df_dx(i,j)-=y(i)*y(j);
+		}
+	}
+	for (i=0;i<N;i++)
+		for(j=i+1;j<N;j++)
+			df_dx(j,i)=df_dx(i,j);
+	
+	return df_dx;
+}
 class c_mlp_layer
 {
 public:
@@ -198,21 +268,61 @@ VectorXd c_mlp::f(VectorXd x)
 	return layer[N_layer-1].y;	
 }
 
+class c_mlp_classifier
+{
+public:
+	c_mlp mlp;
+	c_softmax_layer sf;
+	std::vector<int> N;
+	VectorXd x,y;
+	int N_data, N_in, N_out;
+	MatrixXd X,Y;
+	
+	c_mlp_classifier(){};
+	~c_mlp_classifier(){};
+	void init(std::vector<int> N);
+	VectorXd f(VectorXd);
+};
+
+void c_mlp_classifier::init(std::vector<int> N)
+{
+	this->N.resize(N.size());
+
+	for (int i=0;i<N.size(); i++)
+		this->N[i]=N[i];
+	
+	N_in=N[0];
+	N_out=N[N.size()-1];
+	
+	mlp.init(N);
+	sf.init(N_out);
+	
+	x.resize(N_in);
+	y.resize(N_out);
+	
+	X.resize(N_in,N_data);
+	Y.resize(N_out,N_data);	
+}
+
+VectorXd c_mlp_classifier::f(VectorXd x)
+{
+	this->x=x;
+	
+	y=sf.f(mlp.f(x));
+	return y;
+}
+
 int main()
 {
-	c_mlp_layer l;
-	c_mlp mlp;
-	VectorXd x,y;
 	std::vector<int> N;
+	VectorXd x,y;
 	
-	N = {3, 4, 5, 4, 5};
-	mlp.init(N);
+	c_mlp_classifier mlp_clf;
 	
-	x.resize(3);
+	N = {2, 2, 4};
+	mlp_clf.init(N);
+	x.resize(N[0]);
 	x.setRandom();
-	y.resize(5);
-	y.setRandom();
-		
-	mlp.dJ_check();
-
+	
+	cout << mlp_clf.f(x) << endl;
 }
