@@ -4,15 +4,21 @@ VRPN_LIBS = -lvrpn -lquat -pthread
 OPTI_FLAG = -O3
 GTK_LIBS = -rdynamic `pkg-config --cflags gtk+-3.0`  `pkg-config --libs gtk+-3.0` 
 
-mlp: c_mlp.o mlp.o c_softmax.o
-	g++ -o mlp mlp.o c_mlp.o c_softmax.o -lm $(CFLAGS)
+test_fdcl_nn: test_fdcl_nn.o fdcl_nn.o fdcl_softmax_layer.o fdcl_mlp_layer.o fdcl_layer.o
+	g++ -o test_fdcl_nn  test_fdcl_nn.o fdcl_nn.o fdcl_softmax_layer.o fdcl_mlp_layer.o fdcl_layer.o -lm $(CFLAGS) $(OPTI_FLAGS)
 
-mlp.o: MLP.cpp 
-	g++ -c MLP.cpp $(CFLAGS)
+test_fdcl_nn.o: test_fdcl_nn.cpp fdcl_nn.o
+	g++ -c test_fdcl_nn.cpp -lm $(CFLAGS)
 
-c_mlp.o: c_mlp.cpp c_mlp.h
-	g++ -c c_mlp.cpp  $(CFLAGS)
+fdcl_nn.o: fdcl_nn.h fdcl_nn.cpp fdcl_softmax_layer.o fdcl_mlp_layer.o fdcl_layer.o
+	g++ -c fdcl_nn.cpp $(CFLAGS)
 
-c_softmax.o: c_softmax.cpp c_softmax.h
-	g++ -c c_softmax.cpp  $(CFLAGS)
+fdcl_softmax_layer.o: fdcl_softmax_layer.cpp fdcl_softmax_layer.h fdcl_layer.o
+	g++ -c fdcl_softmax_layer.cpp $(CFLAGS)
+
+fdcl_mlp_layer.o: fdcl_mlp_layer.cpp fdcl_mlp_layer.h fdcl_layer.o
+	g++ -c fdcl_mlp_layer.cpp $(CFLAGS)
+
+fdcl_layer.o: fdcl_layer.cpp fdcl_layer.h
+	g++ -c fdcl_layer.cpp $(CFLAGS)
 	
